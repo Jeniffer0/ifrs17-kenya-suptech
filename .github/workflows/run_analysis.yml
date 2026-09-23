@@ -1,0 +1,31 @@
+name: Run IFRS 17 Regression Analysis
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pandas openpyxl statsmodels numpy scipy
+
+      - name: Run regression analysis
+        run: python ifrs17_regression.py
+
+      - name: Save output as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-results
+          path: ifrs17_dataset_2023.csv
