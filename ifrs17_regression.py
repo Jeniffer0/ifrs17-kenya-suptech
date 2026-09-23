@@ -38,8 +38,8 @@ from datetime import date
 
 warnings.filterwarnings('ignore')
 
-FILE_2023 = 'IRA_Kenya_Annual_Statistics_2023.xlsx'
-FILE_2024 = 'IRA_Kenya_Annual_Statistics_2024.xlsx'
+FILE_2023 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'IRA_Kenya_Annual_Statistics_2023.xlsx')
+FILE_2024 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'IRA_Kenya_Annual_Statistics_2024.xlsx')
 
 for f in [FILE_2023, FILE_2024]:
     if not os.path.exists(f):
