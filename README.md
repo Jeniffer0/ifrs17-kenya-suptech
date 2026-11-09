@@ -1,71 +1,43 @@
 # ifrs17-kenya-suptech
 
-Replication code for:
+Replication code for the manuscript "IFRS 17 as Supervisory Data Infrastructure: Evidence from Kenya and a Proposed AI-Ready SupTech Architecture" (FinTech and Sustainable Innovation, Bon View Publishing).
 
-**"IFRS 17 as Supervisory Data Infrastructure: Toward an AI-Ready Insurance Supervision Architecture in Kenya"**
+Author: Jeniffer Nasike Atetwe
 
-Author: Jeniffer Nasike Atetwe | ORCID: 0009-0009-0309-5045  
-Journal: FinTech and Sustainable Innovation (FSI), Bon View Publishing
-
----
-
-## How to run
+## How to reproduce
 
 ```bash
-pip install pandas openpyxl statsmodels numpy scipy
+pip install -r requirements.txt
 python ifrs17_regression.py
 ```
 
-Place the two data files in the same folder as the script before running.
-
----
+The script reads the two IRA Kenya workbooks in the `data/` folder (no other input is needed) and writes `ifrs17_dataset_2023.csv`. The same steps run automatically in GitHub Actions (`.github/workflows/run_analysis.yml`); the output log is the reference for the values in the paper. Library versions in `requirements.txt` are those used in the reference run (Python 3.11).
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `ifrs17_regression.py` | Main script — loads data, computes all variables, runs regression |
-| `data/IRA_Kenya_Annual_Statistics_2023.xlsx` | Source: IRA Kenya (public) |
-| `data/IRA_Kenya_Annual_Statistics_2024.xlsx` | Source: IRA Kenya (public) |
+| `ifrs17_regression.py` | Computes all variables and prints Tables 4 to 6 and 11 to 15 |
+| `requirements.txt` | Library versions used in the reference run |
+| `data/IRA_Kenya_Annual_Statistics_2023.xlsx` | IRA Kenya public workbook (sheets: Appendix 1, CAR 2, Appendix 5, Details) |
+| `data/IRA_Kenya_Annual_Statistics_2024.xlsx` | IRA Kenya public workbook (Appendix 1, used for revenue growth) |
+| `ifrs17_dataset_2023.csv` | Analytical dataset written by the script |
 
-Data files are publicly available at: https://www.ira.go.ke/index.php/statistics
+Source of the workbooks: https://www.ira.go.ke/index.php/statistics
 
----
+## Variables (as implemented)
 
-## What the script computes automatically
+| Variable in code | Meaning | Source |
+|------------------|---------|--------|
+| CAR | Reported Capital Adequacy Ratio (%). The reference date of the sheet could not be confirmed (header shows 31.12.2021) | 2023 workbook, CAR 2 |
+| IDCS | Five rule-based checks on Appendix 1 fields (revenue, ISE, NRE, ISR non-zero; ISR reconciles within 1%), divided by five | 2023 Appendix 1 |
+| RAGI (ISDI in the paper) | Income Statement Disclosure Depth, 0 to 4, divided by four. It does not measure risk-adjustment methodology | 2023 Appendix 1 |
+| GEP_growth | Insurance Revenue growth 2023 to 2024 | 2023 and 2024 Appendix 1 |
+| combined_ratio | Insurance Service Expense / Insurance Revenue | 2023 Appendix 1 |
+| reins_ratio | absolute Net Reinsurance Expense / Insurance Revenue | 2023 Appendix 1 |
+| ln_assets | Natural log of total assets (KES thousands) | 2023 Appendix 5 |
+| reporting_lag | Constant (244 days, assumed publication date 31 August 2024); excluded from the regression | 2023 Details sheet |
 
-| Variable | Source | Method |
-|----------|--------|--------|
-| CAR | Appendix CAR 2 | As published |
-| IDCS | Appendix 1 | 5 binary criteria: InsRev, ISE, NRE, ISR present + ISR reconciliation |
-| RAGI | Appendix 1 | 0–4 ordinal: disclosure depth from ISR through PBT |
-| GEP growth | Appendix 1 (2023 + 2024) | (InsRev_2024 − InsRev_2023) / InsRev_2023 |
-| Reporting lag | IRA Details sheet | Days from 31 Dec 2023 to IRA annual report publication |
-| Combined ratio | Appendix 1 | ISE / Insurance Revenue |
-| Reinsurance ratio | Appendix 1 | |NRE| / Insurance Revenue |
-| ln(assets) | Appendix 5 | log(Total Assets) |
+## Expected output
 
----
-
-## Key empirical finding
-
-IFRS 17 achieved near-universal disclosure completeness in Year 1:
-29 of 30 active general insurers scored IDCS = 1.0 in 2023.
-All 30 disclosed through PBT (RAGI = 1.0).
-Only ln(assets) is a significant predictor of CAR (coeff ≈ 57, p = 0.037).
-
----
-
-## M2 panel regression
-
-M2 requires IRA Kenya Annual Statistics for 2020–2022 (not uploaded here).
-Download from the IRA Kenya website and place in the `data/` folder.
-The script detects them automatically if named:
-- `data/IRA_Kenya_Annual_Statistics_2023.xlsx`
-- `data/IRA_Kenya_Annual_Statistics_2024.xlsx`
-
----
-
-## Licence
-
-MIT. Data sourced from IRA Kenya public statistics.
+30 active matched insurers; OLS on 24 complete cases with HC3 standard errors: ln(assets) coefficient 56.99 (SE 27.36, p=0.037 normal approximation; p=0.051 with t), R-squared 0.348, F=2.381 (p=0.088). Mean CAR 142.8%, 9 insurers below 100%. The regression is exploratory and associational.
