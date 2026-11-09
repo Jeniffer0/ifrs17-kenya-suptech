@@ -12,17 +12,18 @@ All variables computed automatically from:
 
 Usage:
     pip install pandas openpyxl statsmodels numpy scipy
-    python ifrs17_regression_final.py
+    python ifrs17_regression.py
 
 Notes on variable construction:
   IDCS  = IFRS 17 Disclosure Completeness Score (author-defined, 5 binary criteria)
            Computed from Appendix 1 field presence and internal reconciliation.
-  RAGI  = Risk Adjustment Granularity Index (author-defined, 0-4 ordinal)
-           Computed from income statement disclosure depth in Appendix 1.
+  RAGI  = Income Statement Disclosure Depth Index (ISDI; column kept as 'RAGI')
+           0-4 ordinal: how far down the Appendix 1 income statement is populated.
+           It does NOT measure risk-adjustment methodology.
   GEP growth = Insurance Revenue growth 2023 to 2024 (proxy for insurer growth)
   Reporting lag = Days from 31 Dec 2023 to IRA annual report publication (Aug 2024)
                   All insurers share the same lag (one aggregate publication).
-                  Variation comes from within-insurer filing timing differences.
+                  Constant, so excluded from the regression.
   Combined ratio = ISE / Insurance Revenue
   Reinsurance ratio = |NRE| / Insurance Revenue
   ln(assets) = log(Total Assets) from Appendix 5
@@ -100,6 +101,8 @@ for r in rows_a1[hdr+2:]:
         'fin_exp': sf(r[7]),
         'fin_inc': sf(r[8]),
         'pbt':     sf(r[15]),
+        'nii':     sf(r[6]),
+        'pat':     sf(r[17]),
     }
 
 # Total Assets (Appendix 5 I/II/III/IV — transposed layout)
@@ -252,6 +255,7 @@ for car_name, car_val in car23.items():
         'ln_assets':      ln_assets,
         'total_assets':   ta,
         'ins_rev':        ins_rev,
+        'ise': d['ise'], 'nre': d['nre'], 'isr': d['isr'], 'pbt': d['pbt'], 'nii': d['nii'], 'pat': d['pat'],
     })
 
 df = pd.DataFrame(records)
@@ -287,45 +291,54 @@ print(f"  {Counter(df['RAGI'].round(2))}")
 print("\n" + "=" * 65)
 print("PAIRWISE CORRELATION MATRIX (principal variables)")
 print("=" * 65)
-corr_cols = ['CAR','IDCS','RAGI','ln_assets','GEP_growth','combined_ratio']
+corr_cols = ['CAR','IDCS','RAGI','ln_assets','GEP_growth','combined_ratio','reins_ratio']
 corr_df = df[corr_cols].dropna()
 print(corr_df.corr().round(3).to_string())
 print(f"\n  n = {len(corr_df)} (complete cases)")
-print(f"  Reinsurance ratio omitted from matrix for brevity")
-print(f"  (reins_ratio correlations: CAR={df[['CAR','reins_ratio']].dropna().corr().iloc[0,1]:.2f})")
 
 # ── M1: OLS CROSS-SECTION 2023 ────────────────────────────────────
 print("\n" + "=" * 65)
-print("TABLE 14 — M1: OLS Cross-Section (2023)")
+print("TABLE 14 — M1: OLS Cross-Section (2023), exploratory")
 print("=" * 65)
-print("CAR ~ IDCS + RAGI + reporting_lag + GEP_growth + combined_ratio")
-print("      + ln_assets + reins_ratio")
-print("SE: heteroskedasticity-robust (HC3)")
-
-df_m1 = df[['CAR','IDCS','RAGI','reporting_lag','GEP_growth',
-             'combined_ratio','ln_assets','reins_ratio']].dropna()
+reg_cols = ['GEP_growth','combined_ratio','ln_assets','reins_ratio']
+print("CAR ~ const + " + " + ".join(reg_cols))
+print("SE: HC3; p-values from normal approximation (statsmodels default)")
+df_m1 = df[['CAR'] + reg_cols].dropna()
 print(f"n = {len(df_m1)}")
-
-X_m1 = sm.add_constant(df_m1[['IDCS','RAGI','reporting_lag','GEP_growth',
-                                'combined_ratio','ln_assets','reins_ratio']])
+X_m1 = sm.add_constant(df_m1[reg_cols], has_constant='add')
 model_m1 = sm.OLS(df_m1['CAR'], X_m1).fit(cov_type='HC3')
-
 print(f"\n{'Variable':<22} {'Coeff':>9} {'SE':>9} {'t':>7} {'p':>8}  sig")
 print("-" * 62)
 for var in model_m1.params.index:
-    c = model_m1.params[var]
-    se = model_m1.bse[var]
-    t  = model_m1.tvalues[var]
-    p  = model_m1.pvalues[var]
-    s  = '***' if p<0.01 else ('**' if p<0.05 else ('*' if p<0.1 else ''))
-    print(f"  {var:<20} {c:>9.3f} {se:>9.3f} {t:>7.2f} {p:>8.4f}  {s}")
+    p = model_m1.pvalues[var]
+    s = '***' if p<0.01 else ('**' if p<0.05 else ('*' if p<0.1 else ''))
+    print(f"  {var:<20} {model_m1.params[var]:>9.3f} {model_m1.bse[var]:>9.3f} {model_m1.tvalues[var]:>7.2f} {p:>8.4f}  {s}")
+print(f"\n  N={model_m1.nobs:.0f}  R2={model_m1.rsquared:.3f}  Adj-R2={model_m1.rsquared_adj:.3f}  "
+      f"F={model_m1.fvalue:.3f}  p={model_m1.f_pvalue:.3f}")
+dfr = int(model_m1.df_resid)
+for ct in ['HC3','HC1']:
+    mm = sm.OLS(df_m1['CAR'], X_m1).fit(cov_type=ct)
+    tt = mm.tvalues['ln_assets']
+    print(f"  Sensitivity ln_assets {ct}: SE={mm.bse['ln_assets']:.3f} p(normal)={mm.pvalues['ln_assets']:.4f} "
+          f"p(t, df={dfr})={2*stats.t.sf(abs(tt), dfr):.4f}")
+print("\n  Reporting lag is constant (244 days) and excluded. IDCS and RAGI have")
+print("  (near-)zero variation and are excluded. GEP_growth = Insurance Revenue growth 2023->2024.")
 
-print(f"\n  N={model_m1.nobs:.0f}  R²={model_m1.rsquared:.3f}  "
-      f"Adj-R²={model_m1.rsquared_adj:.3f}  "
-      f"F-stat={model_m1.fvalue:.2f}  p={model_m1.f_pvalue:.4f}")
-print("\n  Note: Reporting lag is constant across all insurers (same IRA publication).")
-print("  IDCS and RAGI are author-coded from IRA Kenya 2023 Appendix 1.")
-print("  GEP growth uses Insurance Revenue 2023→2024 as proxy.")
+# ── TABLE 11 / TABLE 15: group comparison (8 largest vs 22 remaining by 2023 Insurance Revenue)
+print("\n" + "=" * 65)
+print("TABLE 11 — Income statement aggregates (KES thousand), by group")
+print("=" * 65)
+dfs = df.sort_values('ins_rev', ascending=False).reset_index(drop=True)
+groups = {'8 largest': dfs.iloc[:8], '22 remaining': dfs.iloc[8:], 'All 30': dfs}
+for g, x in groups.items():
+    rev, ise, nre, isr = x.ins_rev.sum(), x.ise.sum(), x.nre.sum(), x.isr.sum()
+    print(f"  {g:<13} NII={x.nii.sum():,.0f} PBT={x.pbt.sum():,.0f} PAT={x.pat.sum():,.0f}")
+    print(f"  {g:<13} Rev={rev:,.0f} ISE={ise:,.0f} NRE={nre:,.0f} ISR={isr:,.0f} "
+          f"ISR margin={isr/rev*100:.1f}% residual(Rev-ISE-NRE-ISR)={rev-ise-nre-isr:,.3f}")
+print("\nTABLE 15 — Group means")
+for g, x in groups.items():
+    print(f"  {g:<13} n={len(x)} CAR={x.CAR.mean():.1f} IDCS={x.IDCS.mean():.3f} "
+          f"ISDI={x.RAGI.mean():.3f} ln_assets={x.ln_assets.mean():.3f} (n_assets={x.ln_assets.count()})")
 
 # ── M2: PANEL FE — note ───────────────────────────────────────────
 print("\n" + "=" * 65)
