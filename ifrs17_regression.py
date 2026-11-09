@@ -340,24 +340,6 @@ for g, x in groups.items():
     print(f"  {g:<13} n={len(x)} CAR={x.CAR.mean():.1f} IDCS={x.IDCS.mean():.3f} "
           f"ISDI={x.RAGI.mean():.3f} ln_assets={x.ln_assets.mean():.3f} (n_assets={x.ln_assets.count()})")
 
-# ── M2: PANEL FE — note ───────────────────────────────────────────
-print("\n" + "=" * 65)
-print("TABLE 14 — M2: Panel Fixed Effects (2020-2023)")
-print("=" * 65)
-print("""
-M2 requires historical CAR data for 2020, 2021, 2022.
-These are not in the uploaded files (2023 and 2024 only).
-
-To run M2, add IRA Kenya Annual Statistics for 2020-2022 and
-create historical_car.csv with columns: insurer, year, CAR
-
-M2 specification:
-  CAR_it = α_i + β1·Post2023_it + β2·GEP_growth_it
-           + β3·combined_ratio_it + β4·ln_assets_it
-           + β5·reins_ratio_it + ε_it
-  Insurer FE; clustered SEs at insurer level
-""")
-
 print("=" * 65)
 print("SCRIPT COMPLETE")
 print("=" * 65)
