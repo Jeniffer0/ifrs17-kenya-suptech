@@ -15,7 +15,7 @@ The script reads the two workbooks in the `data/` folder (no other input is need
 
 ## Scope
 
-The analysis is descriptive. It uses only visible, published sheets of the IRA Kenya Annual Insurance Industry Statistics. No capital adequacy data, hidden sheets or regression models are used.
+The analysis is descriptive. The script reads only the Appendix 1, Appendix 5 (I to IV) and Details sheets of the IRA Kenya Annual Insurance Industry Statistics workbooks. No other sheets, no capital adequacy data and no regression models are used.
 
 ## Files
 
@@ -23,8 +23,8 @@ The analysis is descriptive. It uses only visible, published sheets of the IRA K
 |------|---------|
 | `ifrs17_analysis.py` | Computes all variables and prints Tables 4 to 6 and 11 to 13 |
 | `requirements.txt` | Library versions used in the reference run |
-| `data/IRA_Kenya_Annual_Statistics_2023.xlsx` | Extract of the IRA Kenya 2023 workbook: visible sheets Appendix 1, Appendix 5 (I to IV) and Details only |
-| `data/IRA_Kenya_Annual_Statistics_2024.xlsx` | Extract of the IRA Kenya 2024 workbook: visible sheets Appendix 1 and Details only (used for revenue growth) |
+| `data/IRA_Kenya_Annual_Statistics_2023.xlsx` | IRA Kenya 2023 workbook as downloaded from IRA (sheets read: Appendix 1, Appendix 5 I to IV, Details) |
+| `data/IRA_Kenya_Annual_Statistics_2024.xlsx` | IRA Kenya 2024 workbook as downloaded from IRA (sheet read: Appendix 1, used for revenue growth) |
 | `ifrs17_dataset_2023.csv` | Analytical dataset written by the script |
 
 Source of the workbooks: https://www.ira.go.ke/index.php/statistics
