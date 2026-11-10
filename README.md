@@ -33,8 +33,8 @@ Source of the workbooks: https://www.ira.go.ke/index.php/statistics
 
 | Variable in code | Meaning | Source |
 |------------------|---------|--------|
-| IDCS | Five rule-based checks on Appendix 1 fields (revenue, ISE, NRE, ISR non-zero; ISR reconciles within 1%), divided by five. A reported zero scores 0 on its check | 2023 Appendix 1 |
-| ISDI | Income Statement Disclosure Depth, 0 to 4, divided by four. It does not measure risk-adjustment methodology | 2023 Appendix 1 |
+| IDCS (IFRS 17 Data Consistency Score) | Five rule-based checks on Appendix 1: revenue, ISE, NRE and ISR are non-zero, and ISR reconciles to within less than 1% of revenue; divided by five. Four checks test non-zero values and one tests arithmetic consistency; it is not a measure of disclosure completeness. A reported zero scores 0 on its check | 2023 Appendix 1 |
+| ISDI (Income Statement Data Indicator) | Non-zero income statement line items, 0 to 4, divided by four. It does not measure disclosure depth or risk-adjustment methodology | 2023 Appendix 1 |
 | rev_growth | Insurance Revenue growth 2023 to 2024 | 2023 and 2024 Appendix 1 |
 | service_expense_ratio | Insurance Service Expense / Insurance Revenue | 2023 Appendix 1 |
 | reins_ratio | absolute Net Reinsurance Expense / Insurance Revenue | 2023 Appendix 1 |
