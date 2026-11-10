@@ -236,7 +236,7 @@ print(f"  Dataset saved: ifrs17_dataset_2023.csv")
 # -- DESCRIPTIVE STATISTICS ------------------------------------------
 print(f"  Appendix 1 insurer entries: {len(app1)}  |  active (Insurance Revenue != 0): {len(df)}")
 print("\n" + "=" * 65)
-print("DESCRIPTIVE STATISTICS (n = all active insurers)")
+print("TABLE 4 - DESCRIPTIVE STATISTICS (n = all active insurers; distributions = Tables 5 and 6)")
 print("=" * 65)
 desc_cols = ['IDCS','RAGI','GEP_growth','combined_ratio','reins_ratio','ln_assets']
 print(df[desc_cols].describe().round(3).to_string())
@@ -250,7 +250,7 @@ print(f"\nIDCS < 1 insurers: {list(df.loc[df['IDCS']<1,'insurer'])}")
 
 # -- CORRELATION MATRIX (variables with variation only) ---------------
 print("\n" + "=" * 65)
-print("PAIRWISE CORRELATION MATRIX (financial variables with variation)")
+print("TABLE 12 - PAIRWISE CORRELATION MATRIX (financial variables with variation)")
 print("=" * 65)
 corr_cols = ['ln_assets','GEP_growth','combined_ratio','reins_ratio']
 corr_df = df[corr_cols].dropna()
@@ -258,7 +258,7 @@ print(corr_df.corr().round(3).to_string())
 print(f"\n  n = {len(corr_df)} (complete cases)")
 print("  IDCS and ISDI are (near-)constant in the sample and are excluded.")
 
-# -- TABLE 11 / TABLE 15: group comparison (8 largest vs remaining by 2023 Insurance Revenue)
+# -- TABLE 11 / TABLE 13: group comparison (8 largest vs remaining by 2023 Insurance Revenue)
 print("\n" + "=" * 65)
 print("TABLE 11 - Income statement aggregates (KES thousand), by group")
 print("=" * 65)
@@ -269,7 +269,7 @@ for g, x in groups.items():
     print(f"  {g:<13} NII={x.nii.sum():,.0f} PBT={x.pbt.sum():,.0f} PAT={x.pat.sum():,.0f}")
     print(f"  {g:<13} Rev={rev:,.0f} ISE={ise:,.0f} NRE={nre:,.0f} ISR={isr:,.0f} "
           f"ISR margin={isr/rev*100:.1f}% residual(Rev-ISE-NRE-ISR)={rev-ise-nre-isr:,.3f}")
-print("\nTABLE 15 - Group means")
+print("\nTABLE 13 - Group means")
 for g, x in groups.items():
     print(f"  {g:<13} n={len(x)} IDCS={x.IDCS.mean():.3f} ISDI={x.RAGI.mean():.3f} "
           f"ln_assets={x.ln_assets.mean():.3f} (n_assets={x.ln_assets.count()}) "
