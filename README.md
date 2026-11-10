@@ -34,13 +34,13 @@ Source of the workbooks: https://www.ira.go.ke/index.php/statistics
 | Variable in code | Meaning | Source |
 |------------------|---------|--------|
 | IDCS | Five rule-based checks on Appendix 1 fields (revenue, ISE, NRE, ISR non-zero; ISR reconciles within 1%), divided by five. A reported zero scores 0 on its check | 2023 Appendix 1 |
-| RAGI (ISDI in the paper) | Income Statement Disclosure Depth, 0 to 4, divided by four. It does not measure risk-adjustment methodology | 2023 Appendix 1 |
-| GEP_growth | Insurance Revenue growth 2023 to 2024 | 2023 and 2024 Appendix 1 |
-| combined_ratio | Insurance Service Expense / Insurance Revenue | 2023 Appendix 1 |
+| ISDI | Income Statement Disclosure Depth, 0 to 4, divided by four. It does not measure risk-adjustment methodology | 2023 Appendix 1 |
+| rev_growth | Insurance Revenue growth 2023 to 2024 | 2023 and 2024 Appendix 1 |
+| service_expense_ratio | Insurance Service Expense / Insurance Revenue | 2023 Appendix 1 |
 | reins_ratio | absolute Net Reinsurance Expense / Insurance Revenue | 2023 Appendix 1 |
 | ln_assets | Natural log of total assets (KES thousands) | 2023 Appendix 5 |
-| reporting_lag | Constant (244 days, assumed publication date 31 August 2024) | 2023 Details sheet |
+| reporting_lag | Log of an estimated publication-lag proxy (244 days to an assumed 31 August 2024; the source gives the month only) | 2023 Details sheet |
 
 ## Expected output
 
-37 Appendix 1 insurer entries; 32 active insurers (five report zero Insurance Revenue). IDCS mean 0.994 (31 of 32 insurers score 1.0; one scores 0.8); ISDI 1.000 for all 32. Correlations use the 25 complete cases among ln(assets), GEP growth, combined ratio and reinsurance ratio. The eight largest insurers by 2023 Insurance Revenue have a mean combined ratio of 0.832 against 0.876 for the other 24, and a mean reinsurance ratio of 0.127 against 0.107. All results are descriptive.
+37 Appendix 1 insurer entries; 32 active insurers (five report zero Insurance Revenue). IDCS mean 0.994 (31 of 32 insurers score 1.0; one scores 0.8); ISDI 1.000 for all 32. Correlations use the 25 complete cases among ln(assets), Insurance Revenue growth, service expense ratio and reinsurance ratio. The eight largest insurers by 2023 Insurance Revenue have a mean service expense ratio of 0.832 against 0.876 for the other 24, and a mean reinsurance ratio of 0.127 against 0.107. All results are descriptive.
