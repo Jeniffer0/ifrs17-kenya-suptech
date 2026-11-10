@@ -16,9 +16,9 @@ Usage:
     python ifrs17_analysis.py
 
 Variable construction:
-  IDCS  = IFRS 17 Disclosure Completeness Score (author-defined, 5 binary criteria)
+  IDCS  = IFRS 17 Data Consistency Score (author-defined, 5 binary criteria: four test non-zero values, one tests arithmetic consistency)
           computed from Appendix 1 field presence and internal reconciliation.
-  ISDI  = Income Statement Disclosure Depth Index
+  ISDI  = Income Statement Data Indicator (0-4, non-zero line items down the income statement)
           0-4 ordinal: how far down the Appendix 1 income statement is populated.
   rev_growth = Insurance Revenue growth 2023 to 2024
   service_expense_ratio = Insurance Service Expense / Insurance Revenue
