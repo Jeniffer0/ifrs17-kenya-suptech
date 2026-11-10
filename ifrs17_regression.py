@@ -1,31 +1,28 @@
 """
-IFRS 17 / CAR Regression Analysis — IRA Kenya 2023
+IFRS 17 Disclosure Analysis - IRA Kenya 2023
 =====================================================
-Replicates Table 14 of:
-"IFRS 17 as Supervisory Data Infrastructure: Toward an AI-Ready
-Insurance Supervision Architecture in Kenya"
+Reproduces the descriptive tables of:
+"IFRS 17 as Supervisory Data Infrastructure: Evidence from Kenya and a
+Proposed AI-Ready SupTech Architecture"
 Author: Jeniffer Nasike Atetwe | ORCID: 0009-0009-0309-5045
 
-All variables computed automatically from:
-  - IRA_Kenya_Annual_Statistics_2023.xlsx
-  - IRA_Kenya_Annual_Statistics_2024.xlsx
+All variables are computed from the visible, published sheets of:
+  - IRA_Kenya_Annual_Statistics_2023.xlsx   (Appendix 1, Appendix 5 I-IV, Details)
+  - IRA_Kenya_Annual_Statistics_2024.xlsx   (Appendix 1)
+No hidden or protected sheets are read. No Capital Adequacy Ratio data are used.
 
 Usage:
-    pip install pandas openpyxl statsmodels numpy scipy
-    python ifrs17_regression.py
+    pip install -r requirements.txt
+    python ifrs17_analysis.py
 
-Notes on variable construction:
+Variable construction:
   IDCS  = IFRS 17 Disclosure Completeness Score (author-defined, 5 binary criteria)
-           Computed from Appendix 1 field presence and internal reconciliation.
-  RAGI  = Income Statement Disclosure Depth Index (ISDI; column kept as 'RAGI')
-           0-4 ordinal: how far down the Appendix 1 income statement is populated.
-           It does NOT measure risk-adjustment methodology.
-  GEP growth = Insurance Revenue growth 2023 to 2024 (proxy for insurer growth)
-  Reporting lag = Days from 31 Dec 2023 to IRA annual report publication (Aug 2024)
-                  All insurers share the same lag (one aggregate publication).
-                  Constant, so excluded from the regression.
-  Combined ratio = ISE / Insurance Revenue
-  Reinsurance ratio = |NRE| / Insurance Revenue
+          computed from Appendix 1 field presence and internal reconciliation.
+  ISDI  = Income Statement Disclosure Depth Index (column kept as 'RAGI')
+          0-4 ordinal: how far down the Appendix 1 income statement is populated.
+  GEP growth = Insurance Revenue growth 2023 to 2024
+  Combined ratio = Insurance Service Expense / Insurance Revenue
+  Reinsurance ratio = |Net Reinsurance Expense| / Insurance Revenue
   ln(assets) = log(Total Assets) from Appendix 5
 """
 
@@ -33,8 +30,6 @@ import os, sys, warnings
 import numpy as np
 import pandas as pd
 import openpyxl
-import statsmodels.api as sm
-from scipy import stats
 from datetime import date
 
 warnings.filterwarnings('ignore')
@@ -62,23 +57,12 @@ def clean(s):
     return ' '.join(s.split())
 
 print("=" * 65)
-print("IFRS 17 / CAR Regression — IRA Kenya 2023")
+print("IFRS 17 Disclosure Analysis - IRA Kenya 2023")
 print("=" * 65)
 
 # ── LOAD 2023 DATA ────────────────────────────────────────────────
 print(f"\nLoading {FILE_2023}...")
 wb23 = openpyxl.load_workbook(FILE_2023, read_only=True, data_only=True)
-
-# CAR (Appendix CAR 2 = General Insurers)
-car23 = {}
-for row in wb23['CAR 2'].iter_rows(min_row=5, values_only=True):
-    n, car = row[1], row[4]
-    if not n or not isinstance(n, str): continue
-    n = n.strip().upper()
-    if n == 'REINSURERS': break
-    if n == 'INSURERS': continue
-    v = sf(car)
-    if v != 0: car23[n] = v
 
 # Appendix 1 — IFRS 17 P&L
 rows_a1 = list(wb23['APPENDIX 1'].iter_rows(values_only=True))
@@ -157,17 +141,6 @@ name_map_24_23 = {
     'INTRA AFRICA ASSURANCE':    'INTRA-AFRICA ASSURANCE',
 }
 
-# Name mapping: CAR 2 names → Appendix 1 names
-name_map_car = {
-    'HERITAGE INSURANCE COMPANY':       'THE HERITAGE INSURANCE COMPANY',
-    'JUBILEE GENERAL INSURANCE':        'JUBILEE ALLIANZ GENERAL INSURANCE',
-    'MADISON GENERAL INSURANCE COMPANY':'MADISON INSURANCE COMPANY',
-    'PIONEER GENERAL INSURANCE COMPANY':'PIONEER INSURANCE COMPANY',
-    'SANLAM INSURANE COMPANY':          'SANLAM INSURANCE COMPANY',
-    'UAP INSURANCE COMPANY':            'OLD MUTUAL GENERAL INSURANCE',
-    'METROPOLITAN CANNON GENERAL':      'CANNON GENERAL INSURANCE (K) LIMITED',
-}
-
 # ── REPORTING LAG ─────────────────────────────────────────────────
 # IRA Kenya 2023 Annual Statistics published August 2024
 # Year-end: 31 December 2023
@@ -182,13 +155,8 @@ print(f"  Reporting lag: {lag_days} days (31 Dec 2023 → Aug 2024)")
 # ── BUILD DATASET ─────────────────────────────────────────────────
 print("\nBuilding 2023 cross-section dataset...")
 records = []
-for car_name, car_val in car23.items():
-    cn = car_name.strip()
-    a1_name = cn if cn in app1 else name_map_car.get(cn)
-    if not a1_name or a1_name not in app1:
-        continue
-
-    d = app1[a1_name]
+for a1_name, d in app1.items():
+    cn = a1_name
     ins_rev = d['ins_rev']
     if ins_rev == 0: continue   # inactive insurer
 
@@ -245,7 +213,6 @@ for car_name, car_val in car23.items():
 
     records.append({
         'insurer':        cn,
-        'CAR':            car_val,
         'IDCS':           IDCS,
         'RAGI':           RAGI,
         'reporting_lag':  lag_log,
@@ -266,79 +233,48 @@ print(f"  Missing ln_assets: {df['ln_assets'].isna().sum()}")
 df.to_csv('ifrs17_dataset_2023.csv', index=False)
 print(f"  Dataset saved: ifrs17_dataset_2023.csv")
 
-# ── DESCRIPTIVE STATISTICS ────────────────────────────────────────
+# -- DESCRIPTIVE STATISTICS ------------------------------------------
+print(f"  Appendix 1 insurer entries: {len(app1)}  |  active (Insurance Revenue != 0): {len(df)}")
 print("\n" + "=" * 65)
-print("DESCRIPTIVE STATISTICS (n=all active insurers)")
+print("DESCRIPTIVE STATISTICS (n = all active insurers)")
 print("=" * 65)
-desc_cols = ['CAR','IDCS','RAGI','GEP_growth','combined_ratio',
-             'reins_ratio','ln_assets']
+desc_cols = ['IDCS','RAGI','GEP_growth','combined_ratio','reins_ratio','ln_assets']
 print(df[desc_cols].describe().round(3).to_string())
-
-print(f"\nCAR distribution:")
-print(f"  N = {df['CAR'].count()}")
-print(f"  Mean = {df['CAR'].mean():.1f}%")
-print(f"  Median = {df['CAR'].median():.1f}%")
-print(f"  Min = {df['CAR'].min():.1f}%  Max = {df['CAR'].max():.1f}%")
-print(f"  Below 100%: {(df['CAR']<100).sum()}  |  Compliance rate: {(df['CAR']>=100).mean()*100:.1f}%")
 
 print(f"\nIDCS distribution:")
 from collections import Counter
-print(f"  {Counter(df['IDCS'].round(2))}")
-print(f"\nRAGI distribution (normalised):")
-print(f"  {Counter(df['RAGI'].round(2))}")
+print(f"  {sorted(Counter(df['IDCS'].round(2)).items())}")
+print(f"\nRAGI (ISDI) distribution (normalised):")
+print(f"  {sorted(Counter(df['RAGI'].round(2)).items())}")
+print(f"\nIDCS < 1 insurers: {list(df.loc[df['IDCS']<1,'insurer'])}")
 
-# ── CORRELATION MATRIX ────────────────────────────────────────────
+# -- CORRELATION MATRIX (variables with variation only) ---------------
 print("\n" + "=" * 65)
-print("PAIRWISE CORRELATION MATRIX (principal variables)")
+print("PAIRWISE CORRELATION MATRIX (financial variables with variation)")
 print("=" * 65)
-corr_cols = ['CAR','IDCS','RAGI','ln_assets','GEP_growth','combined_ratio','reins_ratio']
+corr_cols = ['ln_assets','GEP_growth','combined_ratio','reins_ratio']
 corr_df = df[corr_cols].dropna()
 print(corr_df.corr().round(3).to_string())
 print(f"\n  n = {len(corr_df)} (complete cases)")
+print("  IDCS and ISDI are (near-)constant in the sample and are excluded.")
 
-# ── M1: OLS CROSS-SECTION 2023 ────────────────────────────────────
+# -- TABLE 11 / TABLE 15: group comparison (8 largest vs remaining by 2023 Insurance Revenue)
 print("\n" + "=" * 65)
-print("TABLE 14 — M1: OLS Cross-Section (2023), exploratory")
-print("=" * 65)
-reg_cols = ['GEP_growth','combined_ratio','ln_assets','reins_ratio']
-print("CAR ~ const + " + " + ".join(reg_cols))
-print("SE: HC3; p-values from normal approximation (statsmodels default)")
-df_m1 = df[['CAR'] + reg_cols].dropna()
-print(f"n = {len(df_m1)}")
-X_m1 = sm.add_constant(df_m1[reg_cols], has_constant='add')
-model_m1 = sm.OLS(df_m1['CAR'], X_m1).fit(cov_type='HC3')
-print(f"\n{'Variable':<22} {'Coeff':>9} {'SE':>9} {'t':>7} {'p':>8}  sig")
-print("-" * 62)
-for var in model_m1.params.index:
-    p = model_m1.pvalues[var]
-    s = '***' if p<0.01 else ('**' if p<0.05 else ('*' if p<0.1 else ''))
-    print(f"  {var:<20} {model_m1.params[var]:>9.3f} {model_m1.bse[var]:>9.3f} {model_m1.tvalues[var]:>7.2f} {p:>8.4f}  {s}")
-print(f"\n  N={model_m1.nobs:.0f}  R2={model_m1.rsquared:.3f}  Adj-R2={model_m1.rsquared_adj:.3f}  "
-      f"F={model_m1.fvalue:.3f}  p={model_m1.f_pvalue:.3f}")
-dfr = int(model_m1.df_resid)
-for ct in ['HC3','HC1']:
-    mm = sm.OLS(df_m1['CAR'], X_m1).fit(cov_type=ct)
-    tt = mm.tvalues['ln_assets']
-    print(f"  Sensitivity ln_assets {ct}: SE={mm.bse['ln_assets']:.3f} p(normal)={mm.pvalues['ln_assets']:.4f} "
-          f"p(t, df={dfr})={2*stats.t.sf(abs(tt), dfr):.4f}")
-print("\n  Reporting lag is constant (244 days) and excluded. IDCS and RAGI have")
-print("  (near-)zero variation and are excluded. GEP_growth = Insurance Revenue growth 2023->2024.")
-
-# ── TABLE 11 / TABLE 15: group comparison (8 largest vs 22 remaining by 2023 Insurance Revenue)
-print("\n" + "=" * 65)
-print("TABLE 11 — Income statement aggregates (KES thousand), by group")
+print("TABLE 11 - Income statement aggregates (KES thousand), by group")
 print("=" * 65)
 dfs = df.sort_values('ins_rev', ascending=False).reset_index(drop=True)
-groups = {'8 largest': dfs.iloc[:8], '22 remaining': dfs.iloc[8:], 'All 30': dfs}
+groups = {'8 largest': dfs.iloc[:8], f'{len(dfs)-8} remaining': dfs.iloc[8:], f'All {len(dfs)}': dfs}
 for g, x in groups.items():
     rev, ise, nre, isr = x.ins_rev.sum(), x.ise.sum(), x.nre.sum(), x.isr.sum()
     print(f"  {g:<13} NII={x.nii.sum():,.0f} PBT={x.pbt.sum():,.0f} PAT={x.pat.sum():,.0f}")
     print(f"  {g:<13} Rev={rev:,.0f} ISE={ise:,.0f} NRE={nre:,.0f} ISR={isr:,.0f} "
           f"ISR margin={isr/rev*100:.1f}% residual(Rev-ISE-NRE-ISR)={rev-ise-nre-isr:,.3f}")
-print("\nTABLE 15 — Group means")
+print("\nTABLE 15 - Group means")
 for g, x in groups.items():
-    print(f"  {g:<13} n={len(x)} CAR={x.CAR.mean():.1f} IDCS={x.IDCS.mean():.3f} "
-          f"ISDI={x.RAGI.mean():.3f} ln_assets={x.ln_assets.mean():.3f} (n_assets={x.ln_assets.count()})")
+    print(f"  {g:<13} n={len(x)} IDCS={x.IDCS.mean():.3f} ISDI={x.RAGI.mean():.3f} "
+          f"ln_assets={x.ln_assets.mean():.3f} (n_assets={x.ln_assets.count()}) "
+          f"combined_ratio={x.combined_ratio.mean():.3f} reins_ratio={x.reins_ratio.mean():.3f} "
+          f"GEP_growth={x.GEP_growth.mean():.3f} (n={x.GEP_growth.count()})")
 
 print("=" * 65)
 print("SCRIPT COMPLETE")
