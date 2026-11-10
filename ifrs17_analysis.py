@@ -18,11 +18,11 @@ Usage:
 Variable construction:
   IDCS  = IFRS 17 Disclosure Completeness Score (author-defined, 5 binary criteria)
           computed from Appendix 1 field presence and internal reconciliation.
-  ISDI  = Income Statement Disclosure Depth Index (column kept as 'RAGI')
+  ISDI  = Income Statement Disclosure Depth Index
           0-4 ordinal: how far down the Appendix 1 income statement is populated.
-  GEP growth = Insurance Revenue growth 2023 to 2024
-  Combined ratio = Insurance Service Expense / Insurance Revenue
-  Reinsurance ratio = |Net Reinsurance Expense| / Insurance Revenue
+  rev_growth = Insurance Revenue growth 2023 to 2024
+  service_expense_ratio = Insurance Service Expense / Insurance Revenue
+  reins_ratio = |Net Reinsurance Expense| / Insurance Revenue
   ln(assets) = log(Total Assets) from Appendix 5
 """
 
@@ -116,7 +116,7 @@ def load_total_assets(wb):
 ta23 = load_total_assets(wb23)
 wb23.close()
 
-# ── LOAD 2024 INSURANCE REVENUE (for GEP growth) ─────────────────
+# ── LOAD 2024 INSURANCE REVENUE (for Insurance Revenue growth) ─────────────────
 print(f"Loading {FILE_2024}...")
 wb24 = openpyxl.load_workbook(FILE_2024, read_only=True, data_only=True)
 rows_a1_24 = list(wb24['APPENDIX 1'].iter_rows(values_only=True))
@@ -141,16 +141,16 @@ name_map_24_23 = {
     'INTRA AFRICA ASSURANCE':    'INTRA-AFRICA ASSURANCE',
 }
 
-# ── REPORTING LAG ─────────────────────────────────────────────────
+# ── ESTIMATED PUBLICATION-LAG PROXY (assumed date) ───────────────
 # IRA Kenya 2023 Annual Statistics published August 2024
 # Year-end: 31 December 2023
 # All 40 insurers share this publication date (one aggregate report)
-# Lag = days from 31 Dec 2023 to 31 Aug 2024
+# Proxy = days from 31 Dec 2023 to an ASSUMED 31 Aug 2024 (source gives month only)
 year_end   = date(2023, 12, 31)
 pub_date   = date(2024, 8, 31)   # "August 2024" per Details sheet
 lag_days   = (pub_date - year_end).days   # 244 days
 lag_log    = np.log(lag_days)
-print(f"  Reporting lag: {lag_days} days (31 Dec 2023 → Aug 2024)")
+print(f"  Estimated publication-lag proxy: {lag_days} days (31 Dec 2023 to assumed 31 Aug 2024)")
 
 # ── BUILD DATASET ─────────────────────────────────────────────────
 print("\nBuilding 2023 cross-section dataset...")
@@ -172,20 +172,20 @@ for a1_name, d in app1.items():
         c5 = 0
     IDCS = (c1 + c2 + c3 + c4 + c5) / 5
 
-    # ── RAGI (0-4 ordinal, /4 normalised) ────────────────────────
+    # ── ISDI (0-4 ordinal, /4 normalised) ────────────────────────
     if ins_rev == 0:
-        ragi_raw = 0
+        isdi_raw = 0
     elif d['pbt'] != 0:
-        ragi_raw = 4
+        isdi_raw = 4
     elif d['fin_exp'] != 0 or d['fin_inc'] != 0:
-        ragi_raw = 3
+        isdi_raw = 3
     elif d['net_fin'] != 0:
-        ragi_raw = 2
+        isdi_raw = 2
     else:
-        ragi_raw = 1
-    RAGI = ragi_raw / 4
+        isdi_raw = 1
+    ISDI = isdi_raw / 4
 
-    # ── GEP growth (InsRev 2023→2024) ────────────────────────────
+    # ── Insurance Revenue growth (InsRev 2023→2024) ────────────────────────────
     a1_clean = clean(a1_name)
     rev24 = insrev_24.get(a1_name)
     if rev24 is None:
@@ -197,10 +197,10 @@ for a1_name, d in app1.items():
         for n24, v24 in insrev_24.items():
             if clean(n24) == a1_clean:
                 rev24 = v24; break
-    gep_growth = (rev24 - ins_rev) / ins_rev if rev24 and ins_rev > 0 else np.nan
+    rev_growth_val = (rev24 - ins_rev) / ins_rev if rev24 and ins_rev > 0 else np.nan
 
     # ── Derived financial variables ───────────────────────────────
-    combined_ratio = d['ise'] / ins_rev if ins_rev > 0 else np.nan
+    service_expense_ratio = d['ise'] / ins_rev if ins_rev > 0 else np.nan
     reins_ratio    = abs(d['nre']) / ins_rev if ins_rev > 0 else np.nan
 
     # Total assets
@@ -214,10 +214,10 @@ for a1_name, d in app1.items():
     records.append({
         'insurer':        cn,
         'IDCS':           IDCS,
-        'RAGI':           RAGI,
+        'ISDI':           ISDI,
         'reporting_lag':  lag_log,
-        'GEP_growth':     gep_growth,
-        'combined_ratio': combined_ratio,
+        'rev_growth':     rev_growth_val,
+        'service_expense_ratio': service_expense_ratio,
         'reins_ratio':    reins_ratio,
         'ln_assets':      ln_assets,
         'total_assets':   ta,
@@ -227,7 +227,7 @@ for a1_name, d in app1.items():
 
 df = pd.DataFrame(records)
 print(f"  Total insurers matched: {len(df)}")
-print(f"  Missing GEP growth: {df['GEP_growth'].isna().sum()}")
+print(f"  Missing Insurance Revenue growth: {df['rev_growth'].isna().sum()}")
 print(f"  Missing ln_assets: {df['ln_assets'].isna().sum()}")
 
 df.to_csv('ifrs17_dataset_2023.csv', index=False)
@@ -238,21 +238,21 @@ print(f"  Appendix 1 insurer entries: {len(app1)}  |  active (Insurance Revenue 
 print("\n" + "=" * 65)
 print("TABLE 4 - DESCRIPTIVE STATISTICS (n = all active insurers; distributions = Tables 5 and 6)")
 print("=" * 65)
-desc_cols = ['IDCS','RAGI','GEP_growth','combined_ratio','reins_ratio','ln_assets']
+desc_cols = ['IDCS','ISDI','rev_growth','service_expense_ratio','reins_ratio','ln_assets']
 print(df[desc_cols].describe().round(3).to_string())
 
 print(f"\nIDCS distribution:")
 from collections import Counter
 print(f"  {sorted(Counter(df['IDCS'].round(2)).items())}")
-print(f"\nRAGI (ISDI) distribution (normalised):")
-print(f"  {sorted(Counter(df['RAGI'].round(2)).items())}")
+print(f"\nISDI distribution (normalised):")
+print(f"  {sorted(Counter(df['ISDI'].round(2)).items())}")
 print(f"\nIDCS < 1 insurers: {list(df.loc[df['IDCS']<1,'insurer'])}")
 
 # -- CORRELATION MATRIX (variables with variation only) ---------------
 print("\n" + "=" * 65)
 print("TABLE 12 - PAIRWISE CORRELATION MATRIX (financial variables with variation)")
 print("=" * 65)
-corr_cols = ['ln_assets','GEP_growth','combined_ratio','reins_ratio']
+corr_cols = ['ln_assets','rev_growth','service_expense_ratio','reins_ratio']
 corr_df = df[corr_cols].dropna()
 print(corr_df.corr().round(3).to_string())
 print(f"\n  n = {len(corr_df)} (complete cases)")
@@ -271,10 +271,10 @@ for g, x in groups.items():
           f"ISR margin={isr/rev*100:.1f}% residual(Rev-ISE-NRE-ISR)={rev-ise-nre-isr:,.3f}")
 print("\nTABLE 13 - Group means")
 for g, x in groups.items():
-    print(f"  {g:<13} n={len(x)} IDCS={x.IDCS.mean():.3f} ISDI={x.RAGI.mean():.3f} "
+    print(f"  {g:<13} n={len(x)} IDCS={x.IDCS.mean():.3f} ISDI={x.ISDI.mean():.3f} "
           f"ln_assets={x.ln_assets.mean():.3f} (n_assets={x.ln_assets.count()}) "
-          f"combined_ratio={x.combined_ratio.mean():.3f} reins_ratio={x.reins_ratio.mean():.3f} "
-          f"GEP_growth={x.GEP_growth.mean():.3f} (n={x.GEP_growth.count()})")
+          f"service_expense_ratio={x.service_expense_ratio.mean():.3f} reins_ratio={x.reins_ratio.mean():.3f} "
+          f"rev_growth={x.rev_growth.mean():.3f} (n={x.rev_growth.count()})")
 
 print("=" * 65)
 print("SCRIPT COMPLETE")
