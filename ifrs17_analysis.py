@@ -144,7 +144,7 @@ name_map_24_23 = {
 # ── ESTIMATED PUBLICATION-LAG PROXY (assumed date) ───────────────
 # IRA Kenya 2023 Annual Statistics published August 2024
 # Year-end: 31 December 2023
-# All 40 insurers share this publication date (one aggregate report)
+# All insurers share this publication date (one aggregate report)
 # Proxy = days from 31 Dec 2023 to an ASSUMED 31 Aug 2024 (source gives month only)
 year_end   = date(2023, 12, 31)
 pub_date   = date(2024, 8, 31)   # "August 2024" per Details sheet
