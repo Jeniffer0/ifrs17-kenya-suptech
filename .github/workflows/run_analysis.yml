@@ -1,4 +1,4 @@
-name: Run IFRS 17 Regression Analysis
+name: Run IFRS 17 Disclosure Analysis
 
 on:
   push:
@@ -21,11 +21,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run regression analysis
-        run: python ifrs17_regression.py
+      - name: Run disclosure analysis
+        run: python ifrs17_analysis.py
 
       - name: Save output as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: regression-results
+          name: analysis-results
           path: ifrs17_dataset_2023.csv
